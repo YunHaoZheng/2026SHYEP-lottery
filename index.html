@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026三和尾牙摸彩</title>
+    
+    <!-- 引入 React 和 ReactDOM (改用 cdnjs，更穩定) -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            /* 防止手機下拉重整干擾 */
+            overscroll-behavior-y: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(252, 211, 77, 0.5);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-red-900 text-white">
+    <!-- 載入失敗時的預備畫面 -->
+    <div id="loading-error" style="display:none; padding: 20px; text-align: center; color: #fca5a5;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 10px;">⚠️ 程式載入失敗</h2>
+        <p>請檢查網路連線，或確認檔案是否以 UTF-8 編碼儲存。</p>
+    </div>
+
+    <div id="root"></div>
+
+    <!-- 檢查 React 是否成功載入 -->
+    <script>
+        window.onload = function() {
+            if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+                document.getElementById('loading-error').style.display = 'block';
+            }
+        }
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // --- 圖示組件 ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const Gift = (p) => <IconBase {...p}><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></IconBase>;
+        const Timer = (p) => <IconBase {...p}><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></IconBase>;
+        const Star = (p) => <IconBase {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>;
+        const AlertCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></IconBase>;
+        const X = (p) => <IconBase {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></IconBase>;
+        const Sparkles = (p) => <IconBase {...p}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5H5"/><path d="M19 19v4"/><path d="M23 21h-4"/></IconBase>;
+        const TableIcon = (p) => <IconBase {...p}><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></IconBase>;
+        const ArrowLeft = (p) => <IconBase {...p}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></IconBase>;
+        const GridIcon = (p) => <IconBase {...p}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></IconBase>;
+        const PlayCircle = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></IconBase>;
+        const ZoomIn = (p) => <IconBase {...p}><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></IconBase>;
+
+        // --- 主程式 ---
+        const PRIZE_IMAGES = [
+            "2D3BDEC3-AAAA-440E-A4EB-0ADF8C26B832.jpeg", "690DA331-B73A-4174-A58A-946EAF576899.jpeg",
+            "ED5B8508-D214-4945-B44C-FB8CF0B8EB73.jpeg", "16397B82-BE6D-489E-80AA-65947011E3CB.jpeg",
+            "5562A07D-A98D-4A8E-B6B5-9EC696A61EFE.jpeg", "C56EDE99-E9A7-4EC5-BA1D-A72112D52CB5.jpeg",
+            "F09C2078-4B1E-4A11-AB4C-9D05B7FB4AAE.jpeg", "ACDC499B-E58B-45ED-8E9B-F87B5B3E37FD.jpeg",
+            "46192D0D-261D-4A04-9F76-C236667A3227.jpeg", "6535B061-7A0D-4083-A1F8-B4787D2D8BE5.jpeg",
+            "0D830B2B-DA50-4CD1-B24D-EDCC893ADF9C.jpeg", "96FC479B-2BE2-4EB2-A04D-C6FA0780D1EE.jpeg",
+            "623986C1-6282-48BC-BFA4-7F8A8362EB1E.jpeg", "E7FCCBC9-18B8-4C71-BD98-7298D91FD6D1.jpeg",
+            "906930F5-C8D7-4D1F-9D9C-9FBB66B25C33.jpeg", "724A2CFB-08BF-4E4E-BA37-523E56077344.jpeg",
+            "A0512800-CF61-40FA-9C59-F3766852E174.jpeg", "E768A6C4-EB2E-4986-880A-195F2B9F2C52.jpeg",
+            "13E79727-FDFA-4D50-B125-0F3BB49B93BD.jpeg", "2A0B0D12-2591-4244-B454-AE49002DE999.jpeg",
+            "8968D9C2-B39E-480B-BDA0-DD0821E08D44.jpeg", "7197C68B-CE5A-4EF8-9CCC-B38D52108411.jpeg",
+            "97D4FE9D-822B-4D9B-92E7-6A4409D0E27B.jpeg", "IMG_3004.jpeg",
+            "6EB1C9EB-A238-4C02-844A-2DF025DBCE42.jpeg", "F2D85F5A-D5E1-410F-B8FF-3482F068719E.jpeg",
+            "0C4880D7-64E5-4C33-9662-C94C1873A0F9.jpeg", "0281C473-0C7B-4B90-A35D-7AB28DA1B4B0.jpeg"
+        ];
+
+        const generateLuckyNumbers = () => {
+            const nums = [];
+            for (let i = 33; i <= 44; i++) nums.push(i);
+            for (let i = 71; i <= 86; i++) nums.push(i);
+            return nums;
+        };
+
+        const mulberry32 = (a) => {
+            return function() {
+                var t = a += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        };
+
+        // 修復：圖片顯示元件 (修正 object-fit 繼承問題)
+        const PrizeDisplay = ({ src, alt, className, isPreview, onClick }) => {
+            const [error, setError] = useState(false);
+
+            if (error) {
+                return (
+                    <div 
+                        onClick={onClick}
+                        className={`w-full h-full bg-red-900/50 flex flex-col items-center justify-center p-4 border-2 border-dashed border-yellow-500/30 text-yellow-500/50 cursor-pointer`}
+                    >
+                        <Gift size={32} className="mb-1 opacity-50" />
+                        <span className="text-[10px] mt-1 text-white/40 text-center break-all">
+                            {src}
+                        </span>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="relative w-full h-full" onClick={onClick}>
+                    <img 
+                        src={src} 
+                        alt={alt} 
+                        // 重要修正：將 className 直接應用在 img 標籤上
+                        className={`${className} ${isPreview ? 'opacity-80 grayscale-[0.3]' : ''} ${onClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
+                        onError={() => setError(true)}
+                    />
+                    {isPreview && <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-white/20 text-5xl font-black rotate-45 border-4 border-white/20 p-4 rounded-xl">SAMPLE</div>}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const LOCK_DATE = new Date('2026-01-23T19:14:30').getTime();
+            const TARGET_DATE = new Date('2026-01-23T19:15:00').getTime();
+            
+            const [currentTime, setCurrentTime] = useState(new Date().getTime());
+            const [luckyNumber, setLuckyNumber] = useState('');
+            const [viewState, setViewState] = useState('input');
+            const [resultImage, setResultImage] = useState('');
+            const [toast, setToast] = useState({ show: false, message: '' });
+            const [isRevealing, setIsRevealing] = useState(false);
+            const [isTestMode, setIsTestMode] = useState(false); 
+            const [simulationMap, setSimulationMap] = useState({});
+            const [zoomedImage, setZoomedImage] = useState(null);
+
+            useEffect(() => {
+                const timer = setInterval(() => setCurrentTime(new Date().getTime()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            const timeLeft = TARGET_DATE - currentTime;
+            const isTimeReached = timeLeft <= 0;
+            const isLockTimeReached = currentTime >= LOCK_DATE;
+
+            const officialPrizeMap = useMemo(() => {
+                const seed = 20260123; 
+                const rng = mulberry32(seed);
+                const numbers = generateLuckyNumbers();
+                const images = [...PRIZE_IMAGES];
+                for (let i = images.length - 1; i > 0; i--) {
+                    const j = Math.floor(rng() * (i + 1));
+                    [images[i], images[j]] = [images[j], images[i]];
+                }
+                const map = {};
+                numbers.forEach((num, index) => {
+                    if (images[index]) map[num] = images[index];
+                });
+                return map;
+            }, []);
+
+            const formatTime = (ms) => {
+                if (ms <= 0) return "活動已開始！";
+                const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+                return `${days}天 ${hours}時 ${minutes}分 ${seconds}秒`;
+            };
+
+            const showToastMessage = (msg) => {
+                setToast({ show: true, message: msg });
+                setTimeout(() => setToast({ show: false, message: '' }), 3000);
+            };
+
+            const validateInput = () => {
+                if (!luckyNumber.trim()) {
+                    showToastMessage("請先輸入您的幸運數字！");
+                    return false;
+                }
+                const num = parseInt(luckyNumber, 10);
+                const isValidRange = (num >= 33 && num <= 44) || (num >= 71 && num <= 86);
+                if (!isValidRange) {
+                    showToastMessage("404 Not Found 沒有這個幸運號碼牌呦！");
+                    return false;
+                }
+                return true;
+            };
+
+            const handleReveal = () => {
+                if (!validateInput()) return;
+                if (!isTimeReached) {
+                    showToastMessage("別著急，先認真吃飯ψ(｀∇´)ψ");
+                    return;
+                }
+                setIsRevealing(true);
+                setTimeout(() => {
+                    const num = parseInt(luckyNumber, 10);
+                    setResultImage(officialPrizeMap[num] || PRIZE_IMAGES[0]);
+                    setIsTestMode(false);
+                    setViewState('result');
+                    setIsRevealing(false);
+                }, 800);
+            };
+
+            const handleTestRun = () => {
+                if (!validateInput()) return;
+                setIsRevealing(true);
+                // 試玩模式：每次都產生全新的隨機列表
+                const numbers = generateLuckyNumbers();
+                const images = [...PRIZE_IMAGES];
+                for (let i = images.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [images[i], images[j]] = [images[j], images[i]];
+                }
+                const newSimMap = {};
+                numbers.forEach((num, index) => {
+                    if (images[index]) newSimMap[num] = images[index];
+                });
+                setSimulationMap(newSimMap);
+                setTimeout(() => {
+                    const num = parseInt(luckyNumber, 10);
+                    setResultImage(newSimMap[num]);
+                    setIsTestMode(true);
+                    setViewState('result');
+                    setIsRevealing(false);
+                }, 800);
+            };
+
+            const currentDisplayMap = isTestMode ? simulationMap : officialPrizeMap;
+
+            return (
+                <div className="min-h-screen bg-gradient-to-b from-red-800 via-red-700 to-red-900 text-white font-sans overflow-x-hidden selection:bg-yellow-400 selection:text-red-900">
+                    {/* 背景動畫 */}
+                    <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                        <div className="absolute -top-10 -left-10 w-40 h-40 bg-yellow-500 rounded-full blur-3xl opacity-20 animate-pulse"></div>
+                        <div className="absolute top-20 right-0 w-32 h-32 bg-orange-500 rounded-full blur-3xl opacity-20"></div>
+                        <div className="absolute bottom-0 left-20 w-56 h-56 bg-red-500 rounded-full blur-3xl opacity-30"></div>
+                        <div className="absolute top-4 left-4 text-4xl opacity-80 animate-bounce" style={{ animationDuration: '3s' }}>🏮</div>
+                        <div className="absolute top-4 right-4 text-4xl opacity-80 animate-bounce" style={{ animationDuration: '3.5s' }}>🏮</div>
+                    </div>
+
+                    <main className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 md:p-6 max-w-lg mx-auto w-full">
+                        
+                        {/* 標題區 */}
+                        <div className="text-center space-y-4 md:space-y-6 mb-8 w-full">
+                            <div className="inline-flex items-center justify-center p-3 bg-red-900/50 rounded-full border border-yellow-500/30 backdrop-blur-sm mb-2">
+                                <Gift className="w-6 h-6 text-yellow-400 mr-2" />
+                                <span className="text-yellow-200 font-bold tracking-widest">LUCKY DRAW</span>
+                            </div>
+                            <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 drop-shadow-sm tracking-tight">
+                                2026三和尾牙摸彩
+                            </h1>
+                            <div className="flex items-center justify-center gap-4">
+                                <div className="h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent w-12 opacity-50"></div>
+                                <h2 className="text-xl font-bold text-yellow-100 tracking-wider">三陽開泰 和氣生財</h2>
+                                <div className="h-px bg-gradient-to-r from-transparent via-yellow-500 to-transparent w-12 opacity-50"></div>
+                            </div>
+                        </div>
+
+                        {/* 輸入畫面 */}
+                        {viewState === 'input' && (
+                            <div className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-6 shadow-2xl space-y-8 animate-in fade-in zoom-in-95 duration-300">
+                                <div className="text-center space-y-4">
+                                    <p className="text-lg text-red-100 font-medium leading-relaxed">
+                                        你的幸運數字將會為你帶來<br/>什麼樣的結果？
+                                    </p>
+                                    
+                                    <div className="bg-black/20 rounded-xl p-4 border border-yellow-500/20">
+                                         <div className="flex items-center justify-center gap-2 text-yellow-400 mb-2 text-sm uppercase tracking-wider font-bold">
+                                            <Timer size={14} />
+                                            <span>命運倒數</span>
+                                        </div>
+                                        <div className="text-2xl md:text-3xl font-mono font-bold text-white tabular-nums tracking-tight">
+                                            {formatTime(timeLeft)}
+                                        </div>
+                                        <div className="text-xs text-red-300 mt-2">
+                                            2026/01/23 19:15 開始轉動
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Star className="h-5 w-5 text-yellow-400 group-focus-within:animate-spin-slow" />
+                                        </div>
+                                        <input
+                                            type="number"
+                                            value={luckyNumber}
+                                            onChange={(e) => setLuckyNumber(e.target.value)}
+                                            placeholder="輸入您的幸運數字"
+                                            className="block w-full pl-12 pr-4 py-4 bg-red-900/40 border border-red-400/30 rounded-2xl text-yellow-100 placeholder-red-300/50 focus:ring-2 focus:ring-yellow-400 focus:border-transparent outline-none transition-all text-lg font-bold text-center"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={handleReveal}
+                                        disabled={isRevealing}
+                                        className={`w-full py-4 px-6 rounded-2xl font-black text-xl shadow-lg transform transition-all duration-200 flex items-center justify-center gap-2 ${
+                                            isTimeReached
+                                                ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-red-900 hover:scale-[1.02] active:scale-[0.98] shadow-orange-500/30'
+                                                : 'bg-gray-600 text-gray-400 cursor-not-allowed grayscale opacity-80'
+                                        }`}
+                                    >
+                                        {isRevealing ? (
+                                            <>
+                                                <span className="animate-spin">⚙️</span>
+                                                <span>命運轉動中...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className={isTimeReached ? "animate-pulse" : ""} />
+                                                <span>揭曉答案</span>
+                                            </>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={handleTestRun}
+                                        disabled={isRevealing}
+                                        className="w-full py-3 px-6 rounded-2xl font-bold text-lg bg-red-900/30 border border-yellow-500/30 text-yellow-100/70 hover:bg-red-900/50 hover:text-yellow-100 hover:border-yellow-500/60 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <PlayCircle size={20} />
+                                        <span>試玩一下 (測試功能)</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 結果畫面 */}
+                        {viewState === 'result' && (
+                            <div className="w-full bg-gradient-to-b from-red-800 to-red-900 border-2 border-yellow-500 rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col items-center">
+                                <div className="text-center mb-6">
+                                    {isTestMode ? (
+                                        <>
+                                            <div className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-bold mb-2 border border-yellow-500/50">
+                                                測試模擬
+                                            </div>
+                                            <h3 className="text-2xl font-black text-white">這只是試玩結果</h3>
+                                            <p className="text-red-200 text-sm mt-1">正式結果將於活動時間揭曉</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="text-yellow-400 font-bold text-lg mb-1">幸運數字 {luckyNumber}</div>
+                                            <h3 className="text-3xl font-black text-white">🎉 命運揭曉 🎉</h3>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className={`w-full aspect-square bg-black rounded-2xl overflow-hidden border-4 ${isTestMode ? 'border-dashed border-gray-500/50' : 'border-yellow-500/50'} shadow-inner relative mb-6`}>
+                                    <PrizeDisplay 
+                                        src={resultImage} 
+                                        alt="Prize" 
+                                        className="w-full h-full object-contain"
+                                        isPreview={isTestMode}
+                                        onClick={() => setZoomedImage(resultImage)}
+                                    />
+                                    <div className="absolute bottom-2 right-2 text-white/50 bg-black/50 p-1 rounded-full pointer-events-none">
+                                        <ZoomIn size={16} />
+                                    </div>
+                                </div>
+
+                                <div className="w-full space-y-3">
+                                    <button 
+                                        onClick={() => setViewState('list')}
+                                        className="w-full bg-yellow-500 text-red-900 py-3 rounded-xl font-bold text-lg hover:bg-yellow-400 shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <GridIcon size={20} />
+                                        看看大家抽到什麼
+                                    </button>
+
+                                    <button 
+                                        onClick={() => setViewState('input')}
+                                        className="w-full bg-red-900/50 border border-yellow-500/30 text-yellow-200 py-3 rounded-xl font-bold hover:bg-red-800 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <ArrowLeft size={20} />
+                                        返回輸入號碼
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 列表畫面 */}
+                        {viewState === 'list' && (
+                            <div className="w-full bg-white/95 text-red-900 rounded-3xl p-4 shadow-2xl animate-in slide-in-from-bottom-10 duration-300 flex flex-col max-h-[70vh]">
+                                <div className="flex items-center justify-between mb-4 border-b border-red-200 pb-2">
+                                    <h3 className="text-xl font-bold flex items-center gap-2">
+                                        <TableIcon className="w-5 h-5" />
+                                        {isTestMode ? "本輪模擬開獎結果" : "全體開獎結果"}
+                                    </h3>
+                                    <button 
+                                        onClick={() => setViewState('result')}
+                                        className="p-2 bg-red-100 rounded-full hover:bg-red-200 text-red-800"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-red-100 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="p-3 text-left rounded-tl-lg">號碼</th>
+                                                <th className="p-3 text-right rounded-tr-lg">對應獎項</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-red-100">
+                                            {generateLuckyNumbers().map((num) => (
+                                                <tr key={num} className={num === parseInt(luckyNumber) ? "bg-yellow-100" : ""}>
+                                                    <td className="p-3 font-bold text-lg font-mono">
+                                                        {num}
+                                                        {num === parseInt(luckyNumber) && <span className="ml-2 text-xs text-red-500 bg-white px-1 rounded border border-red-200">YOU</span>}
+                                                    </td>
+                                                    <td className="p-3 text-right">
+                                                        <div className="h-16 w-16 ml-auto rounded-lg border border-gray-200 overflow-hidden bg-gray-50 relative group cursor-pointer">
+                                                            {isTestMode || isLockTimeReached ? (
+                                                                <>
+                                                                    <PrizeDisplay 
+                                                                        src={currentDisplayMap[num]} 
+                                                                        alt={`Prize for ${num}`}
+                                                                        className="w-full h-full object-cover"
+                                                                        isPreview={isTestMode}
+                                                                        onClick={() => setZoomedImage(currentDisplayMap[num])}
+                                                                    />
+                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                                                                        <ZoomIn size={20} className="text-white drop-shadow-md" />
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-100">
+                                                                    ???
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <p className="text-center text-xs text-gray-500 mt-4">
+                                    {isTestMode 
+                                        ? "* 此為測試模擬數據，不代表最終結果" 
+                                        : "* 此列表於 2026/01/23 19:14:30 自動鎖定"}
+                                </p>
+                            </div>
+                        )}
+
+                        <footer className="mt-8 text-center text-red-300/60 text-sm font-medium">
+                            © 2026 南投三和郵局
+                        </footer>
+                    </main>
+
+                    {/* 提示訊息 Toast */}
+                    <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${toast.show ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0 pointer-events-none'}`}>
+                        <div className="bg-white text-red-600 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-red-100 min-w-[300px]">
+                            <AlertCircle className="w-6 h-6 shrink-0 text-red-500" />
+                            <p className="font-bold text-sm md:text-base leading-tight">{toast.message}</p>
+                        </div>
+                    </div>
+
+                    {/* 圖片放大檢視 Modal */}
+                    {zoomedImage && (
+                        <div 
+                            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-200"
+                            onClick={() => setZoomedImage(null)}
+                        >
+                            <button 
+                                className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 p-2 rounded-full hover:bg-white/20 transition-all"
+                                onClick={() => setZoomedImage(null)}
+                            >
+                                <X size={32} />
+                            </button>
+                            
+                            <div className="max-w-4xl w-full max-h-[85vh] flex items-center justify-center relative">
+                                <img 
+                                    src={zoomedImage} 
+                                    alt="Zoomed Prize" 
+                                    className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                                    onClick={(e) => e.stopPropagation()} 
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
